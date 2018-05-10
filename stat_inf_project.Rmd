@@ -1,0 +1,168 @@
+---
+title: "Statistical inference with the GSS data"
+output: 
+  html_document: 
+    fig_height: 4
+    highlight: pygments
+    theme: spacelab
+---
+
+## Setup
+
+### Load packages
+
+```{r load-packages, message = FALSE}
+library(ggplot2)
+library(dplyr)
+library(statsr)
+library(scales)
+library(knitr)
+```
+
+### Load data
+
+```{r load-data}
+load("gss.Rdata")
+```
+
+* * *
+
+## Part 1: Data
+
+**General Social Survey (GSS)** was designed to _monitor social change_ across a range of important social matters such as civil liberties, crime and violence, intergroup tolerance, morality, national spending priorities, psychological well-being, social mobility, and stress and traumatic events. Since 1972, the GSS has been gathering data on contemporary American society in order to _monitor and explain trends, changes and constants in attitudes, behaviors, and attributes_. 
+
+The GSS contains a standard core of demographic, behavioral, and attitudinal questions, plus topics of special interest. It allows researchers to examine the _structure and functioning of society in general_ as well as the role played by _relevant subgroups_ within the United States and to _compare_ the United States to other nations.The GSS aims to make up-to-date, high-quality data easily accessible to scholars, students, policy makers, and others, with minimal cost and waiting. 
+
+The survey was conducted _every year_ from 1972 to 1994 (except in 1979, 1981, and 1992). Since 1994, it has been conducted _every other year_. As of 2014, _30 national samples_ with _59,599 respondents_ and _5,900+_ variables have been collected.
+
+**Data Collection:** The vast majority of GSS data is obtained in _face-to-face interviews_. Computer-assisted personal interviewing began in the 2002. Under some conditions when it has proved difficult to arrange an in-person interview with a sampled respondent, GSS interviews were conducted by telephone. 
+
+**Sampling:** The target population of the GSS is _English-speaking persons 18 years of age or over, living in non-institutional arrangements within the United States_. Starting in 2006 _Spanish-speakers_ were added to the target population. The GSS sample is drawn using an area probability design that _randomly selects_ respondents in households across the United States to take part in the survey. Respondents that become part of the GSS sample are from a mix of urban, suburban, and rural geographic areas. Potential biases are associated with non-response since the participation is strictly voluntary.
+
+**Generalizability:** The inferences made from this data set are generalizable because respondents are _randomly selected_. The results are _generalizable to the GSS target population_. Persons unable to do the survey in either English or Spanish, as well as residents of institutions and group quarters are _out-of-scope_. 
+
+**Causality:** Since the GSS is an _observational study_ with _no random assignment_, we _cannot infer causality_.
+
+
+* * *
+
+## Part 2: Research question
+
+#### Is there a difference in job satisfaction between self-employed immigrants in the United States and wage workers from the same group?
+
+**Rationale:** According to a [Pew Research Center study of Census data](http://www.pewsocialtrends.org/2015/10/22/three-in-ten-u-s-jobs-are-held-by-the-self-employed-and-the-workers-they-hire/) (2014), _immigrants in the United States are more likely than native-born workers to be self-employed_, regardless of race or ethnicity. Previous studies support these findings. Using the 1970 and 1980 U.S. Censuses, the analysis by George J. Borjas (["The Self-Employment Experience of Immigrants"](http://www.nber.org/papers/w1942)) shows that _"self-employment rates of immigrants exceed those of native-born men"_. 
+
+When it comes to [job satisfaction](https://www.researchgate.net/publication/227811101_Why_and_When_Are_the_Self-Employed_More_Satisfied_with_Their_Work), many studies conclude that _self-employees enjoy higher levels of job satisfaction than wage workers_. For this analysis, wage worker is defined as respondent who reported "working for someone else".
+
+Our research question, focused on _2.982 immigrant workers_, examines the _difference in job satisfaction between self-employees and wage workers_. 
+
+* * *
+
+## Part 3: Exploratory data analysis
+
+The analysis will be based on the following variables:
+
+* **Job satisfaction** </br>
+: _Categorical variable "satjob"_ (Question: _"On the whole, how satisfied are you with the work you do?"_) with 4 levels (_"Very satisfied", "Moderately satisfied", "A little dissatisfied"_ and _"Very dissatisfied"_).
+
+* **Type of employment status (self-employed or wage employee)** </br>
+: _Categorical variable "wrkslf"_ (Question: _"(Are/were) you self employed or (do/did) you work for someone else?"_) with 2 levels (_"Self-employed"_ and _"Someone else"_).
+
+```{r}
+gss %>% 
+  select(satjob, wrkslf) %>% 
+  str()
+```
+
+```{r}
+levels(gss$satjob)
+levels(gss$wrkslf)
+```
+
+Since we are focused only on _foreign-born respondents_, new dataset, named _"job_sat_imm"_, will be created, selecting relevant variables and removing "NA"s. Filtering is made based on variable _"born"_ (being born in USA), including only foreign-born respondents.
+
+```{r}
+job_sat_imm <- gss %>%
+    select(satjob, wrkslf) %>%
+    filter(gss$born == "No", satjob != "NA", wrkslf != "NA")
+```
+
+New dataset consists of 2.982 observations and two variables: _job satisfaction_ and _type of employment status (self-employed/working for someone else)_.
+
+```{r}
+dim(job_sat_imm)
+```
+
+Next step is calculating two-way table, followed by a mosaic plot, capturing some essential features of the data.
+
+```{r}
+job_table = table(job_sat_imm$wrkslf, job_sat_imm$satjob)
+kable(job_table[1:2,],digits = 4)
+```
+
+Size of the boxes in mosaic plot is related to the counts in the contingency table. We can observe that self-employed immigrants are mostly reporting high satisfaction with their job, while the number of the self-employed immigrants who are feeling very dissatisfied with their job is the smallest. Number of the respondents who are working for someone else and feeling moderately satisfied is the highest.
+
+```{r}
+mosaicplot(job_table, main =  "Levels of job satisfaction of wage and self-employed \nimmigrant workers", xlab = "Self-employed / Working for someone else", ylab = "Job satisfaction", color = c("lightblue", "gray"), las = 1, cex.axis = 0.66)
+```
+
+We will construct a bar chart in order to visualize _differences in job satisfaction between immigrants who are self-employed, as opposed to wage employees_.
+
+```{r}
+ggplot(data = job_sat_imm, aes(x = wrkslf, fill = satjob)) + 
+    geom_bar(position = "fill") + 
+    ggtitle("Levels of job satisfaction of wage and self-employed immigrant workers") +
+    labs(x = "Self-employed / Working for someone else", y = "Job satisfaction") + 
+    labs(fill = "Job satisfaction") +
+    scale_y_continuous(labels = scales::percent) +
+    scale_fill_brewer()
+```
+
+Based on the bar chart and the contingency table, we can conclude:
+
+* _Self-employed_ immigrants have _more frequently reported being "very satisfied" with their job (61.66%)_ than wage workers from the same group _(42.25%)_.
+* Immigrants working _for someone else_ are _more likely to be "very dissatisfied" (4.10%) and "little dissatisfied" (10.67%) with their job_, compared to self-employees from the same group _(1.58% "very dissatisfied" and 7.11% "little dissatisfied")_.
+
+* * *
+
+## Part 4: Inference
+
+Our ultimate goal is to see whether there is a _significant difference in the job satisfaction_ between immigrants who are _self-employed_, as opposed to those who are _working for someone else_. 
+
+The hypotheses can be described as the following:
+
+* **Null Hypothesis**: _There is no relationship between job satisfaction and employment status of immigrants (self-employed or wage employee)._
+* **Alternative Hypothesis**: _There is a relationship between job satisfaction and employment status of immigrants (self-employed or wage employee)._
+
+Since we want to assess association between two categorical variables, with one having more than 2 levels, we are going to use **Chi-square test of independence**. 
+
+**Conditions for Chi-square test of independence:**
+_All required conditions for calculating Chi-square statistic are met._ Sampled observations are _independent_ of each other, which is ensured by _random sampling_. If sampling is happening without replacement, our sample size has to be _less than 10% of our population_. The . observations met this requirement. Each case only contribute to one cell in the table. Each particular cell has at least 5 expected counts. This condition is confirmed by the following expected counts table. 
+
+```{r}
+job_con_table <- table(job_sat_imm$satjob, job_sat_imm$wrkslf)
+kable(job_con_table[1:4,],digits = 2)
+```
+
+Using sample data, we are calculating degrees of freedom, expected frequencies, test statistic, and the P-value associated with the test statistic. For this analysis, the _significance level is 0.05_.
+
+```{r}
+chi_job <- chisq.test(job_table)
+chi_job
+```
+
+The Chi-Square statistic is 49.27, degree of freedom is 3 and the associated P value is 0.0000000001143.
+
+_Expected counts table_ displays what the counts would be for our sample data if there were no association between the variables.
+
+```{r}
+expected_counts = chi_job$expected
+kable(expected_counts[1:2,],digits = 4)
+```
+
+Since the P-value (0.0000000001143) is less than the significance level of 0.05, we are **rejecting the null hypothesis** in favor of the alternative hypothesis. Observed counts are so different from the expected counts that we can conclude a relationship between two variables.
+
+**Conclusion:** _Our data provide convincing evidence that there is a significant relationship between job satisfaction and type of employment status of immigrants (being self-employed or working for someone else)._
+
+For possible future studies would be interesting to include variables "parents born in the United States" and "grandparents born outside the United States", in order to analyse differences in first and second generation of immigrants, concerning job satisfaction and self-employment.
+
